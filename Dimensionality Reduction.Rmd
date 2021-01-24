@@ -1,0 +1,232 @@
+---
+title: "PCA + Feature Selection"
+author: "Ruth Muriithi"
+date: "1/23/2021"
+output: html_document
+---
+
+#Specifying the Question
+
+*Undertaking a project on behalf of Carrefour Kenya, that will inform the marketing department on the most relevant marketing strategies that will result in the highest no. of sales.*
+
+#Defining the metric for success
+
+The ability adequately selecting our features and reduce our dimensions is what will determine whether the project is a success or not.
+
+#Understanding the context
+
+Carrefour is a multinational corporation of French origin specialized in retail. I was founded in 1958, making it 62 years old.
+
+In 2016 Carrefour set up shop in Kenya, It is currently in 15 countries and has over 250 hypermarkets.
+
+This project is being done on behalf of Carrefour Kenya, I will be undertaking a project that will inform the marketing department on the most relevant marketing strategies that will result in the highest no. of sales (total price including tax).
+
+#Recording the experimental design
+The findings of my analysis will be recorded in this markdown file and uploaded on github.
+
+#Data reading and checking
+
+```{r}
+df <- read.csv("http://bit.ly/CarreFourDataset")
+head(df)
+
+```
+
+```{r}
+summary(df)
+```
+```{r}
+#Checking the data type of each column 
+#
+
+str(df)
+```
+
+*Data Cleaning*
+
+```{r}
+#Preview the column names 
+#
+df.copy <- df
+colnames(df)
+```
+
+
+```{r}
+#shape of the dataset 
+#
+
+dim(df)
+```
+
+
+```{r}
+# Tidying the Data
+
+#Checking for duplicates 
+#
+
+anyDuplicated(df)
+```
+There are no duplicates in our dataset.
+
+```{r}
+#Checking for missing values 
+#
+
+colSums(is.na(df))
+```
+None of the columns have a missing value.
+
+We'll factorise our character 
+
+```{r}
+## Encoding 
+df$Branch <- as.factor(df$Branch)
+df$Product.line <- as.factor(df$Product.line)
+df$Payment <- as.factor(df$Payment)
+df$Customer.type <- as.factor(df$Customer.type)
+df$Gender <- as.factor(df$Gender)
+
+str(df)
+
+```
+
+```{r}
+#Label Encoding 
+#Customer_type 
+#
+df$Customer.type <- ifelse(df$Customer.type == "Member",1,0)
+df$Gender <- ifelse(df$Gender == "Female",1,0)
+
+table(df$Customer.type)
+table(df$Gender)
+```
+```{r}
+head(df)
+```
+
+```{r}
+#install.packages("caret")
+library(caret)
+require(caret)
+df <- df[-c(1,9,10)]
+dmy <- dummyVars(" ~ .", data = df, fullRank = T)
+df.final <- data.frame(predict(dmy, newdata = df))
+df.final
+```
+
+# Exploratory Analysis
+
+## Univariate Analysis 
+```{r}
+#Summary statistics of our dataset
+
+summary(df.copy)
+```
+
+## Bivariate Analysis
+
+
+```{r}
+# Create correlation matrix of data
+df.num <- Filter(is.numeric, df.copy)
+df.num <- df.num[,c(1:4, 6, 7,8)] 
+res <- cor(df.num)
+round(res, 4)
+```
+We dropped the gross margin percentage column because it has a standard deviation of zero.
+
+
+# Multivariate Analysis
+```{r}
+head(df.final)
+```
+
+### PCA
+```{r}
+#Dropping the gross_margin_percentage
+df.final <- df.final[c(1:15, 17,18,19)]
+df.pr <- prcomp(df.final, center = TRUE, scale = TRUE)
+summary(df.pr)
+
+screeplot(df.pr, type = "l", npcs = 15, main = "Screeplot of the first 10 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(df.pr$sdev^2 / sum(df.pr$sdev^2))
+plot(cumpro[0:15], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 6, col="blue", lty=5)
+abline(h = 0.88759, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC6"),
+       col=c("blue"), lty=5, cex=0.6)
+
+```
+
+#Claculating the Eigenvalue per component
+#It is advised to only keep components with an eigenvalue greater than 1
+
+```{r}
+df.pr$sdev ^ 2
+```
+
+
+
+The first 9 variables have a eigenvalue greater than 1, We shall use them for our modelling. 
+
+```{r}
+
+print(df.pr$rotation)
+```
+
+#A biplot, it will help us see the grouping of different variables
+
+
+```{r}
+library(tidyselect)
+library(tidyverse)
+df.pr %>% biplot(cex = .5)
+```
+
+
+# Implementing the Solution 
+
+### Feature Ranking
+```{r}
+#suppressWarnings(suppressMessages(if(!require(FSelector, quietly=TRUE)) #install.packages("FSelector")))
+library(FSelector)
+
+
+#Ranking variables
+
+Scores <- linear.correlation(df.final)
+Scores %>% arrange(desc(Scores$attr_importance))
+
+```
+The list of important features in descending order is as shown above. 
+
+The table below shows the top 5 features.
+
+```{r}
+Subset <- cutoff.k(Scores, 5)
+as.data.frame(Subset)
+```
+As you can see our top five performing features are:
+>1. Branch.C			
+2. Rating			
+3. Product.line.Food.and.beverages			
+4. Product.line.Sports.and.travel			
+5. Payment.Credit.card
+
+# Follow up Questions 
+
+1. Did we have the right data? **Yes we did**
+
+2. Did we have the right question? **Yes we did**
+
+3. Do we need to do anything else to answer the question? **No**
+
+# Conclusion and Recommendation
+
+If we were to use five features to build our model, we would use the above. 
+

@@ -1,0 +1,140 @@
+---
+title: "Untitled"
+author: "Ruth Muriithi"
+date: "1/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Reading the Data
+```{r}
+#Installing Packages 
+#
+
+suppressPackageStartupMessages(install.packages("data.table"))
+require(data.table)
+
+suppressPackageStartupMessages(install.packages("anomalize"))
+library(anomalize)
+
+suppressPackageStartupMessages(install.packages("dplyr"))
+require(dplyr)
+
+suppressPackageStartupMessages(install.packages("tibbletime"))
+require(tibbletime)
+
+suppressPackageStartupMessages(install.packages("tibble"))
+require(tibble)
+
+#Loading our data 
+url = "http://bit.ly/CarreFourSalesDataset"
+df.cf <- read.csv(url)
+
+```
+
+Checking the Data 
+
+```{r}
+#Previewing our dataset 
+#
+head(df.cf)
+
+str(df.cf)
+```
+
+Basic data preview
+
+```{r}
+#Preview the column names 
+#
+
+colnames(df.cf)
+
+#shape of the dataset 
+#
+
+dim(df.cf)
+
+```
+Tidying the Data
+
+```{r}
+
+
+#Checking for duplicates 
+#
+
+anyDuplicated(df.cf)
+
+#Checking for missing values 
+#
+
+colSums(is.na(df.cf))
+
+
+```
+
+Conversion to date data type
+
+```{r}
+
+df.cf$Date <- as.Date(df.cf$Date, format = "%m/%d/%y")
+str(df.cf)
+
+#Convertion to POCIXct type
+df.cf$Date <- as.POSIXct(df.cf$Date)
+
+
+df.cf <- df.cf %>% as.tibble()
+```
+
+# Implementing the Solution 
+
+```{r}
+#Plotting anomalies
+df.cf %>%
+  time_decompose(Sales, method = "stl",  frequency = "auto", trend = "auto") %>%  
+  anomalize(remainder, method = "gesd", alpha = 0.05, max_anoms = 0.1) %>% 
+  plot_anomaly_decomposition()
+
+```
+
+#Recomposing
+
+```{r}
+
+df.cf %>% 
+  time_decompose(Sales, method = "stl",  frequency = "auto", trend = "auto") %>% 
+  anomalize(remainder,  method = "gesd", alpha = 0.05, max_anoms = 0.1) %>%
+  time_recompose() %>%  
+  plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5)
+```
+
+# finding anomalies
+
+
+```{r}
+anomalies = df.cf %>% 
+  time_decompose(Sales, method = "stl",  frequency = "auto", trend = "auto") %>%  
+  anomalize(remainder,  method = "gesd", alpha = 0.05, max_anoms = 0.1) %>%  
+  time_recompose() %>%  
+  filter(anomaly == 'Yes')
+anomalies
+```
+
+The dates listed above have anomalies.
+
+# Follow up Questions 
+
+1. Did we have the right data? **Yes we did**
+
+2. Did we have the right question? **Yes we did**
+
+3. Do we need to do anything else to answer the question? **No**
+
+# Conclusion and Recommendation
+
+I recommend that the carrefour marketing team keenly looks at the anomalies identified, and not be quick to assume they part of the trend while coming up with the strategy. 

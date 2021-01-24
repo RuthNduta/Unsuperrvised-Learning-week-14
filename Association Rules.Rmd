@@ -1,0 +1,153 @@
+---
+title: "Market Basket Analysis"
+author: "Ruth Muriithi"
+date: "1/23/2021"
+output: html_document
+---
+
+In this session, we will go through an example of association rules using the arules package. The documentation of this package can be found by visiting the following link:
+*https://www.rdocumentation.org/packages/arules/versions/1.6-4.*
+
+Below is an extract from its documentation:
+
+"It provides the infrastructure for representing, manipulating and analyzing transaction data and patterns (frequent itemsets and association rules). It also provides interfaces to C implementations of the association mining algorithms Apriori and Eclat."$
+
+**Defining the metric for success**
+
+The project will be considered a success if we are able to build an apriori model. 
+
+Reading the Data
+```{r}
+#Installing packages
+
+#install.packages("arules")
+library(arules)
+
+#Loading our data 
+#http://bit.ly/SupermarketDatasetII
+#
+
+url = "http://bit.ly/SupermarketDatasetII"
+Transactions<-read.transactions(url, sep = ",")
+Transactions
+```
+Checking the Data 
+
+```{r}
+# Verifying the object's class
+# ---
+# This should show us transactions as the type of data that we will need
+# ---
+# 
+class(Transactions)
+```
+Previewing our first 5 transactions
+
+```{r}
+inspect(Transactions[1:5])
+
+```
+Previewing the items that make up our dataset,
+
+```{r}
+items<-as.data.frame(itemLabels(Transactions))
+colnames(items) <- "Item"
+head(items, 10)
+```
+ 
+Implementing the Solution
+
+```{r}
+# Generating a summary of the transaction dataset
+#Informing the marketing department on the most relevant marketing strategies that will result in the highest no. of sales
+# 
+summary(Transactions)
+
+```
+As you can see above the items that are frequently purchased include: 
+>
+- Mineral Water 
+- Eggs 
+- Spaghetti 
+- French Fries 
+- Chocolate 
+
+
+Exploring the frequency of some articles 
+
+```{r}
+
+itemFrequency(Transactions[, 5:10],type = "absolute")
+round(itemFrequency(Transactions[, 5:10],type = "relative")*100,2)
+```
+Producing a chart of frequencies and fitering and Displaying top 10 most common items in the transactions dataset and the items whose relative importance is at least 10%
+
+```{r}
+par(mfrow = c(1, 2))
+# plot the frequency of items
+
+itemFrequencyPlot(Transactions, topN = 10,col="darkgreen")
+itemFrequencyPlot(Transactions, support = 0.1,col="darkred")
+
+```
+Building a model based on association rules we use Min Support as 0.001 and confidence as 0.8
+
+```{r}
+rules <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.8))
+rules
+```
+ 
+Building a apriori model with Min Support as 0.002 and confidence as 0.8
+
+```{r}
+rules2 <- apriori (Transactions,parameter = list(supp = 0.002, conf = 0.8)) 
+
+```
+
+Building apriori model with Min Support as 0.002 and confidence as 0.6
+
+```{r}
+rules3 <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.6)) 
+
+rules2
+
+rules3
+```
+
+Observing rules built in our model i.e. first 5 model rules
+ 
+
+```{r}
+inspect(rules[1:5])
+
+# Ordering these rules by a criteria 
+# 
+
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+```
+
+# Follow up Questions
+
+1. Did we have the right data? **Yes we did**
+
+2. Did we have the right question? **Yes we did**
+
+3. Do we need to do anything else to answer the question? **No**
+
+
+# Conclusion and Recommendation
+
+As you can see above the items that are frequently purchased include:
+
+>Mineral Water
+Eggs
+Spaghetti
+French Fries
+Chocolate
+
+$Strategy$ 
+
+1. Ensure that stock for the above items is always sufficient. 
+2. strategically place the above items: place them where they can easily be seen. This may result to a client purchasing some of these items despite it not being on the shopping list hence higher sales.
+3, Curate favourable offers
